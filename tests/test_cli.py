@@ -68,13 +68,33 @@ def test_clone_then_update_and_adopt(tmp_path: Path, origin: Path, monkeypatch):
     assert (root / "demo" / "scratch.txt").read_text(encoding="utf-8") == "wip\n"
 
     # a repo cloned by hand gets adopted into the config on sync
+    extra_origin = origin.parent / "extra.git"
     subprocess.run(
-        ["git", "clone", str(origin), str(root / "extra")],
+        ["git", "clone", "--bare", origin.as_posix(), extra_origin.as_posix()],
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "clone", extra_origin.as_posix(), str(root / "extra")],
         check=True,
         capture_output=True,
     )
     assert main(["sync", "-c", str(config_path), "-q"]) == 0
     assert sorted(s.name for s in load_config(config_path).repos) == ["demo", "extra"]
+
+
+def test_sync_ignores_a_second_checkout_of_a_known_repo(tmp_path: Path, origin: Path):
+    config_path = write_config(tmp_path / "repofleet.toml", "checkout", origin)
+    root = tmp_path / "checkout"
+
+    assert main(["clone", "-c", str(config_path), "-q"]) == 0
+    subprocess.run(
+        ["git", "clone", origin.as_posix(), str(root / "demo-copy")],
+        check=True,
+        capture_output=True,
+    )
+    assert main(["sync", "-c", str(config_path), "-q"]) == 0
+    assert [s.name for s in load_config(config_path).repos] == ["demo"]
 
 
 def test_status_reports_missing(tmp_path: Path, origin: Path, capsys):
