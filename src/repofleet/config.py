@@ -48,10 +48,13 @@ class FleetConfig:
     directory: Optional[str] = None
     match: List[str] = field(default_factory=lambda: ["*"])
     remote: str = "origin"
+    repos_file: Optional[str] = None
     stash: bool = True
     prune: bool = True
     jobs: int = 4
     autoadopt: bool = True
+    # Repo names that came from ``repos_file``; never inlined back into the TOML.
+    external: List[str] = field(default_factory=list)
 
     @property
     def base_dir(self) -> Path:
@@ -161,6 +164,7 @@ def _load_toml(path: Path) -> FleetConfig:
         directory=workspace.get("directory"),
         match=list(workspace.get("match") or ["*"]),
         remote=str(workspace.get("remote", "origin")),
+        repos_file=workspace.get("repos_file"),
         stash=bool(defaults.get("stash", True)),
         prune=bool(defaults.get("prune", True)),
         jobs=max(1, int(defaults.get("jobs", 4))),
@@ -171,8 +175,11 @@ def _load_toml(path: Path) -> FleetConfig:
 
     repos_file = workspace.get("repos_file")
     if repos_file:
-        extra = load_config(path.parent / repos_file)
-        config.repos = merge_specs(config.repos, extra.repos)
+        listed = path.parent / repos_file
+        if listed.is_file():
+            extra = load_config(listed)
+            config.external = [s.name for s in extra.repos]
+            config.repos = merge_specs(config.repos, extra.repos)
     return config
 
 
@@ -246,6 +253,37 @@ def merge_specs(
 # --------------------------------------------------------------------------- write
 
 
+REPOS_FILENAME = "repo-urls.txt"
+
+REPOS_TEMPLATE = """\
+# repofleet repository list
+#
+# One repository per line. Lines starting with '#' are ignored, so the examples
+# below do nothing until you delete the leading '#'.
+#
+#   <url>                     directory name is derived from the URL
+#   <name> = <url>            clone into a directory called <name>
+#   <url> <branch>            pin the repo to a branch
+#
+# Examples (replace with your own):
+# https://github.com/org/service.api.git
+# https://dev.azure.com/org/Project/_git/service.auth
+# tools = git@github.com:org/internal-tooling.git
+# https://github.com/org/service.worker.git   develop
+#
+# Then run:  repofleet sync
+"""
+
+
+def write_repos_template(path: Path) -> bool:
+    """Create the example repo list. Returns False if the file already exists."""
+    if path.exists():
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(REPOS_TEMPLATE, encoding="utf-8")
+    return True
+
+
 def _toml_str(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -264,6 +302,13 @@ def render_config(config: FleetConfig) -> str:
         f"directory = {_toml_str(config.directory or config.name)}",
         "match = [" + ", ".join(_toml_str(m) for m in config.match) + "]",
         f"remote = {_toml_str(config.remote)}",
+    ]
+    if config.repos_file:
+        lines += [
+            "# repos_file: extra repositories, one URL per line (easy to paste and share)",
+            f"repos_file = {_toml_str(config.repos_file)}",
+        ]
+    lines += [
         "",
         "[defaults]",
         f"stash = {str(config.stash).lower()}",
@@ -273,7 +318,15 @@ def render_config(config: FleetConfig) -> str:
         f"autoadopt = {str(config.autoadopt).lower()}",
         "",
     ]
-    for spec in sorted(config.repos, key=lambda s: s.name.lower()):
+    external = set(config.external)
+    listed = [s for s in config.repos if s.name not in external]
+    if not listed:
+        lines += [
+            "# No repositories yet. Add them with 'repofleet add <url>', or list the URLs in",
+            f"# {config.repos_file or 'repo-urls.txt'} and run 'repofleet sync'.",
+            "",
+        ]
+    for spec in sorted(listed, key=lambda s: s.name.lower()):
         lines.extend(_render_repo(spec))
     return "\n".join(lines).rstrip() + "\n"
 

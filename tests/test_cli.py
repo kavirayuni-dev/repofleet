@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from repofleet.cli import main
-from repofleet.config import load_config
+from repofleet.config import REPOS_FILENAME, load_config
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git is required")
 
@@ -109,3 +109,32 @@ def test_add_and_remove(tmp_path: Path, origin: Path, capsys):
     assert sorted(s.name for s in load_config(config_path).repos) == ["demo", "other"]
     assert main(["remove", "-c", str(config_path), "other"]) == 0
     assert [s.name for s in load_config(config_path).repos] == ["demo"]
+
+
+def test_init_creates_config_and_repo_list(tmp_path: Path, capsys):
+    output = tmp_path / "repofleet.toml"
+    assert main(["init", "--root", str(tmp_path), "--output", str(output)]) == 0
+
+    repos_file = tmp_path / REPOS_FILENAME
+    assert repos_file.is_file()
+    assert load_config(output).repos == []
+    assert load_config(repos_file).repos == []  # template is fully commented out
+
+    out = capsys.readouterr().out
+    assert "Next steps" in out
+    assert REPOS_FILENAME in out
+
+
+def test_init_repo_list_feeds_the_fleet(tmp_path: Path, origin: Path):
+    output = tmp_path / "repofleet.toml"
+    assert main(["init", "--root", str(tmp_path), "--output", str(output)]) == 0
+
+    (tmp_path / REPOS_FILENAME).write_text(f"{origin.as_posix()}\n", encoding="utf-8")
+    config = load_config(output)
+    assert [s.name for s in config.repos] == ["demo"]
+
+    # repos owned by the list file are not copied into the TOML on rewrite
+    assert main(["add", "-c", str(output), "https://host/org/other.git"]) == 0
+    assert main(["remove", "-c", str(output), "other"]) == 0
+    assert "demo" not in output.read_text(encoding="utf-8")
+    assert [s.name for s in load_config(output).repos] == ["demo"]

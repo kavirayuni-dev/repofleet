@@ -115,28 +115,29 @@ Generate the list from what is on disk, then keep everything current:
 
 ```bash
 cd "/path/to/your/workspace"
-repofleet init --name "Portfolios Backend" --match "portfolios.*"
+repofleet init --name "Backend Services" --match "svc.*"
 repofleet sync
 ```
 
 `init` writes `repofleet.toml` next to you, containing one entry per git repo it found
-(the `origin` URL of each). Commit or share that file.
+(the `origin` URL of each). It also writes a `repo-urls.txt` containing commented-out examples,
+where you can paste any extra repositories you want. Commit or share both files.
 
 ### B. You have nothing yet (new joiner)
 
-Put the shared `repofleet.toml` (or `team-repos.txt`) in an empty folder and run:
+Put the shared `repofleet.toml` (or `repo-urls.txt`) in an empty folder and run:
 
 ```bash
 repofleet sync
 ```
 
 Every repo is cloned into the workspace directory declared by the config
-(`directory = "..."`), e.g. `./Portfolios Backend/portfolios.api`.
+(`directory = "..."`), e.g. `./Backend Services/svc.api`.
 
 ### C. You just want to clone a list of URLs, no config file
 
 ```bash
-repofleet clone --repos-file team-repos.txt --root ./workspace
+repofleet clone --repos-file repo-urls.txt --root ./workspace
 repofleet clone --repo https://github.com/org/a.git --repo https://github.com/org/b.git --root ./workspace
 ```
 
@@ -146,7 +147,8 @@ repofleet clone --repo https://github.com/org/a.git --repo https://github.com/or
 
 ### `repofleet init`
 
-Create a configuration file from the repositories found on disk.
+Create a configuration file from the repositories found on disk, plus a `repo-urls.txt` list you
+can paste more URLs into.
 
 | Option | Meaning |
 | --- | --- |
@@ -155,12 +157,31 @@ Create a configuration file from the repositories found on disk.
 | `--match GLOB [GLOB...]` | Only track folders whose names match (default `*`). |
 | `--output FILE` | Where to write (default `./repofleet.toml`). |
 | `--force` | Overwrite an existing config. |
+| `--no-repos-file` | Do not create the companion `repo-urls.txt`. |
 | `--root DIR` | Folder to scan (default: the config's own folder). |
 
 ```bash
-repofleet init --name "Portfolios Backend" --directory "Portfolios Backend" --match "portfolios.*"
+repofleet init --name "Backend Services" --directory "Backend Services" --match "svc.*"
 repofleet init --root ~/code --output ~/code/repofleet.toml --force
 repofleet init --dry-run          # show what would be recorded
+```
+
+Running `init` in an empty folder is normal and useful: you get a config with no repositories and
+an empty list file. Fill in `repo-urls.txt`, then run `repofleet sync` to clone everything. `init`
+prints these next steps for you.
+
+```
+Wrote C:\code\ws\repofleet.toml with 0 repository entrie(s).
+Wrote C:\code\ws\repo-urls.txt - paste your repository URLs there, one per line.
+
+Next steps
+----------
+1. List the repositories you want, one URL per line, in
+   C:\code\ws\repo-urls.txt
+   (the file already contains commented-out examples)
+2. Preview what will happen:  repofleet sync --dry-run
+3. Clone everything:          repofleet sync
+4. Every day after that:      repofleet sync   (clones new, pulls the rest)
 ```
 
 ### `repofleet list`
@@ -169,7 +190,7 @@ Show every tracked repository, its URL, and whether it is present locally.
 
 ```bash
 repofleet list
-repofleet list --only "portfolios.a*"
+repofleet list --only "svc.a*"
 ```
 
 ### `repofleet status`
@@ -187,8 +208,8 @@ Clone only the repositories that are missing. Repos already present are reported
 
 ```bash
 repofleet clone
-repofleet clone --only portfolios.api
-repofleet clone --repos-file team-repos.txt --root ./workspace -j 8
+repofleet clone --only svc.api
+repofleet clone --repos-file repo-urls.txt --root ./workspace -j 8
 ```
 
 ### `repofleet update`
@@ -203,7 +224,7 @@ Fetch and pull every repository that is already cloned.
 
 ```bash
 repofleet update
-repofleet update --only "portfolios.a*" -j 8
+repofleet update --only "svc.a*" -j 8
 repofleet update --no-stash          # leave dirty repos completely untouched
 ```
 
@@ -233,7 +254,7 @@ Track one or more new repositories.
 | `--clone` | Clone immediately after adding. |
 
 ```bash
-repofleet add https://dev.azure.com/org/Proj/_git/portfolios.newservice --clone
+repofleet add https://dev.azure.com/org/Project/_git/new.service --clone
 repofleet add https://github.com/org/tooling.git --name tools --branch develop
 ```
 
@@ -245,7 +266,7 @@ preserved. Duplicate URLs are ignored (comparison ignores case, `.git` and embed
 Stop tracking repositories. **Only the config file is edited — nothing on disk is deleted.**
 
 ```bash
-repofleet remove portfolios.legacy portfolios.spike
+repofleet remove legacy.service spike.service
 ```
 
 ---
@@ -269,7 +290,7 @@ Every command accepts these:
 | `--version` | – | Print the version and exit. |
 
 `--only` / `--exclude` use shell-style globs against the **repo name** (the folder name), e.g.
-`--only "portfolios.a*" "*.api"`.
+`--only "svc.a*" "*.api"`.
 
 ---
 
@@ -279,12 +300,12 @@ Every command accepts these:
 
 ```toml
 [workspace]
-name      = "Portfolios Backend"   # human-readable workspace name
+name      = "Backend Services"     # human-readable workspace name
 root      = "auto"                 # "auto", or a path relative to this file, or absolute
-directory = "Portfolios Backend"   # folder created when root = "auto" and nothing is cloned yet
-match     = ["portfolios.*"]       # which local folders may be auto-adopted
+directory = "Backend Services"     # folder created when root = "auto" and nothing is cloned yet
+match     = ["svc.*"]              # which local folders may be auto-adopted
 remote    = "origin"               # remote name used for clone/fetch/pull
-# repos_file = "team-repos.txt"    # optional: merge an external list into this config
+repos_file = "repo-urls.txt"       # optional: merge an external list into this config
 
 [defaults]
 stash     = true    # stash local changes before pulling, restore afterwards
@@ -293,26 +314,30 @@ jobs      = 4       # parallel workers
 autoadopt = true    # write newly discovered local repos back into this file
 
 [[repos]]
-name   = "portfolios.api"                                   # optional, derived from the URL
-url    = "https://dev.azure.com/org/Proj/_git/portfolios.api"
-branch = "main"                                             # optional, defaults to remote HEAD
+name   = "svc.api"                                  # optional, derived from the URL
+url    = "https://github.com/org/svc.api.git"
+branch = "main"                                     # optional, defaults to remote HEAD
 ```
+
+Repos listed in `repos_file` are merged in at load time and are **not** copied into the TOML, so
+the two files stay cleanly separated.
 
 A shorthand table is also accepted:
 
 ```toml
 [repos]
-"portfolios.api"  = "https://dev.azure.com/org/Proj/_git/portfolios.api"
-"portfolios.auth" = "https://dev.azure.com/org/Proj/_git/portfolios.auth"
+"svc.api"  = "https://github.com/org/svc.api.git"
+"svc.auth" = "https://github.com/org/svc.auth.git"
 ```
 
 ### 7.2 Plain text list
 
 The easiest thing to paste into a wiki or e-mail. Extensions `.txt`, `.list`, `.repos`.
+`repofleet init` creates one for you (`repo-urls.txt`) pre-filled with commented-out examples.
 
 ```
-# team-repos.txt
-https://dev.azure.com/org/Proj/_git/portfolios.api        # comment after two spaces + #
+# repo-urls.txt
+https://github.com/org/svc.api.git             # comment after two spaces + #
 https://github.com/org/tooling.git
 custom-folder-name = https://github.com/org/other.git      # alias the directory name
 https://github.com/org/legacy.git   release/2024           # pin a branch
@@ -324,7 +349,7 @@ Rules:
 - `name = url` sets the directory name;
 - a second whitespace-separated token after the URL is the branch.
 
-Use it with `-c team-repos.txt`, `--repos-file team-repos.txt`, or `repos_file` in the TOML.
+Use it with `-c repo-urls.txt`, `--repos-file repo-urls.txt`, or `repos_file` in the TOML.
 
 ### 7.3 Where the config is found
 
@@ -341,11 +366,14 @@ adoption have nowhere to write and will tell you to run `repofleet init`.
 ### 7.4 Bundled profiles
 
 Ready-made lists ship inside the package under `repofleet/profiles/`, e.g.
-`polaris-portfolios.toml`. Copy one next to your workspace and run:
+`example-workspace.toml`. Copy one next to your workspace, replace the URLs with your own, and run:
 
 ```bash
-repofleet sync -c polaris-portfolios.toml
+repofleet sync -c example-workspace.toml
 ```
+
+Auto-discovery only looks for `repofleet.toml` / `.repofleet.toml`, so either pass `-c` every time
+or rename the copy to `repofleet.toml`.
 
 ---
 
@@ -359,7 +387,7 @@ repofleet sync -c polaris-portfolios.toml
    - otherwise → use `<config folder>/<directory>` (falling back to `name`).
 
 This is what lets the *same* config work for a veteran whose repos already sit next to the config
-and for a new joiner who gets everything cloned into a fresh `Portfolios Backend/` folder.
+and for a new joiner who gets everything cloned into a fresh `Backend Services/` folder.
 
 Check what will be used with:
 
@@ -401,7 +429,7 @@ only if the update succeeded — appended to the config file:
 
 ```
 Added 1 newly discovered repo(s) to C:\...\repofleet.toml:
-  + portfolios.newservice  https://dev.azure.com/org/Proj/_git/portfolios.newservice
+  + svc.newservice  https://github.com/org/svc.newservice.git
 ```
 
 So when a colleague adds a repo, whoever clones it first pushes it into the shared list simply by
@@ -414,19 +442,19 @@ Adoption never runs for `clone` or `update`, only for `sync`.
 ## 11. Reading the output
 
 ```
-config : C:\code\Portfolios Backend\repofleet.toml
-root   : C:\code\Portfolios Backend
-  [+] portfolios.api: updated
-  [x] portfolios.auth: failed
+config : C:\code\Backend Services\repofleet.toml
+root   : C:\code\Backend Services
+  [+] svc.api: updated
+  [x] svc.auth: failed
 ...
 --------------------------------------------------
 Sync summary
 --------------------------------------------------
-portfolios.api   updated
-                 - on main
-                 - Fast-forward
-portfolios.auth  failed
-                 - git pull failed: ...
+svc.api   updated
+          - on main
+          - Fast-forward
+svc.auth  failed
+          - git pull failed: ...
 --------------------------------------------------
 2 repo(s): 1 failed, 1 updated
 ```
@@ -489,7 +517,7 @@ repofleet sync -j 8
 repofleet sync --dry-run
 
 # Only the alerting services
-repofleet update --only "portfolios.alerts*"
+repofleet update --only "svc.alerts*"
 
 # Everything except the noisy ones
 repofleet update --exclude "*.scripts" "*.wiki"
@@ -504,7 +532,7 @@ repofleet clone
 repofleet update --no-stash
 
 # Track a brand-new service and clone it in one go
-repofleet add https://dev.azure.com/org/Proj/_git/portfolios.newservice --clone
+repofleet add https://github.com/org/svc.newservice.git --clone
 
 # One-off list from a colleague, into a scratch folder
 repofleet clone --repos-file colleague-repos.txt --root ./scratch
@@ -551,8 +579,8 @@ Three ways, pick what fits:
    Teammates run `pip install repofleet` then `repofleet sync`.
 2. **Zip the project folder.** Teammates unzip and run `python bootstrap.py sync` — no install, no
    virtualenv.
-3. **Commit `repofleet.toml`** into an existing repo (or a wiki page as a `team-repos.txt`) and let
-   people point at it with `-c`.
+3. **Commit `repofleet.toml` and `repo-urls.txt`** into an existing repo (or paste the list on a
+   wiki page) and let people point at it with `-c`.
 
 Keep the shared config authoritative by letting `sync` adopt new repos, and review the appended
 entries in your normal code-review flow.
@@ -566,7 +594,8 @@ entries in your normal code-review flow.
 | `error: 'git' was not found on PATH` | Install git, or open a new shell so `PATH` is refreshed. |
 | `repofleet: command not found` | The scripts folder is not on `PATH`. Use `python -m repofleet ...` or `pipx install repofleet`. |
 | `git clone failed: ... could not read Username` | Credentials are missing; prompts are disabled on purpose. Clone one repo manually to store credentials, or switch to SSH. |
-| `No repositories selected` | No config was found and no `--repo`/`--repos-file` was given. Run `repofleet init`. |
+| `No repositories selected` | The config has no repositories yet. Paste URLs into `repo-urls.txt`, or use `repofleet add <url>` / `--repos-file`. |
+| `config : <none - using CLI arguments>` | No config was found. Auto-discovery only matches `repofleet.toml` / `.repofleet.toml` — rename your file or pass `-c <file>`. |
 | Repos cloned into an unexpected folder | See [root resolution](#8-how-the-workspace-root-is-resolved); run `repofleet status` to print the resolved root, or pass `--root`. |
 | `pull succeeded but 'git stash pop' failed - stash kept` | Your stashed changes conflict with the new commits. `cd` into the repo and resolve, then `git stash pop`. |
 | `<path> exists and is not an empty git repo` | A non-git folder occupies the target name. Rename/remove it, or alias the repo with `name = url`. |

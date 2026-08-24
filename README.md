@@ -55,11 +55,12 @@ Requires **Python 3.9+** and **git** on `PATH`. Verify with `repofleet --version
 
 ```bash
 cd "/path/to/your/workspace"
-repofleet init --name "Portfolios Backend" --match "portfolios.*"
+repofleet init --name "Backend Services" --match "svc.*"
 repofleet sync
 ```
 
-`init` scans the folder, records every git repo it finds and writes `repofleet.toml`.
+`init` scans the folder, records every git repo it finds and writes `repofleet.toml` plus an empty
+`repo-urls.txt` you can paste more URLs into.
 
 ### You have nothing yet (typical for a new joiner)
 
@@ -70,19 +71,19 @@ repofleet sync
 ```
 
 Everything is cloned into the workspace directory declared in the config
-(`directory = "Portfolios Backend"` by default for the bundled Polaris profile).
+(`directory = "..."`).
 
-A ready-made profile for the Polaris portfolios services ships with the package at
-`src/repofleet/profiles/polaris-portfolios.toml`:
+An example profile ships with the package at `src/repofleet/profiles/example-workspace.toml` -
+copy it, swap in your own URLs, and run:
 
 ```bash
-repofleet sync -c polaris-portfolios.toml
+repofleet sync -c example-workspace.toml
 ```
 
 ### You just want a list of URLs cloned somewhere
 
 ```bash
-repofleet clone --repos-file team-repos.txt --root ./workspace
+repofleet clone --repos-file repo-urls.txt --root ./workspace
 ```
 
 ---
@@ -121,10 +122,10 @@ Common options (available on every command):
 Examples:
 
 ```bash
-repofleet update --only "portfolios.a*" -j 8
-repofleet clone --repos-file team-repos.txt --root ./workspace
+repofleet update --only "svc.a*" -j 8
+repofleet clone --repos-file repo-urls.txt --root ./workspace
 repofleet sync --dry-run
-repofleet add https://dev.azure.com/org/Proj/_git/new.service --clone
+repofleet add https://dev.azure.com/org/Project/_git/new.service --clone
 ```
 
 Every flag is documented in the [usage guide](docs/USAGE.md#5-command-reference).
@@ -137,13 +138,13 @@ Every flag is documented in the [usage guide](docs/USAGE.md#5-command-reference)
 
 ```toml
 [workspace]
-name      = "Portfolios Backend"
+name      = "Backend Services"
 # "auto": use this file's folder when it already holds repos, else use `directory`.
 root      = "auto"
-directory = "Portfolios Backend"
-match     = ["portfolios.*"]   # which local folders may be auto-adopted
+directory = "Backend Services"
+match     = ["svc.*"]          # which local folders may be auto-adopted
 remote    = "origin"
-# repos_file = "team-repos.txt"  # optional: pull the repo list from another file
+repos_file = "repo-urls.txt"   # optional: extra repos listed one URL per line
 
 [defaults]
 stash     = true   # stash local changes before pulling, restore afterwards
@@ -152,8 +153,8 @@ jobs      = 4      # parallel workers
 autoadopt = true   # write newly discovered local repos back into this file
 
 [[repos]]
-name = "portfolios.api"
-url  = "https://dev.azure.com/org/Proj/_git/portfolios.api"
+name = "svc.api"
+url  = "https://github.com/org/svc.api.git"
 # branch = "develop"   # optional, defaults to the remote's default branch
 ```
 
@@ -162,14 +163,15 @@ url  = "https://dev.azure.com/org/Proj/_git/portfolios.api"
 ### Plain text list (easiest to share)
 
 ```
-# team-repos.txt
-https://dev.azure.com/org/Proj/_git/portfolios.api
+# repo-urls.txt
+https://github.com/org/svc.api.git
 https://github.com/org/tooling.git
 custom-folder-name = https://github.com/org/other.git
 https://github.com/org/legacy.git   release/2024   # pin a branch
 ```
 
-Use it with `--repos-file team-repos.txt`, or reference it from `repos_file` in the TOML.
+Use it with `--repos-file repo-urls.txt`, or reference it from `repos_file` in the TOML.
+`repofleet init` creates this file for you, pre-filled with commented-out examples.
 
 ### Config lookup order
 
@@ -189,18 +191,18 @@ Use it with `--repos-file team-repos.txt`, or reference it from `repos_file` in 
 ## Output & exit codes
 
 ```
-config : C:\code\Portfolios Backend\repofleet.toml
-root   : C:\code\Portfolios Backend
-  [+] portfolios.api: updated
-  [x] portfolios.auth: failed
+config : C:\code\Backend Services\repofleet.toml
+root   : C:\code\Backend Services
+  [+] svc.api: updated
+  [x] svc.auth: failed
 
 --------------------------------------------------
 Sync summary
 --------------------------------------------------
-portfolios.api   updated
-                 - on main
-portfolios.auth  failed
-                 - git pull failed: ...
+svc.api   updated
+          - on main
+svc.auth  failed
+          - git pull failed: ...
 --------------------------------------------------
 2 repo(s): 1 failed, 1 updated
 ```

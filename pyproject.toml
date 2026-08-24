@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repofleet"
-version = "0.1.0"
+version = "0.2.0"
 description = "Clone, update and keep a fleet of git repositories in sync from a single declarative config."
 readme = "README.md"
 requires-python = ">=3.9"

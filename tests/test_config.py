@@ -19,7 +19,7 @@ from repofleet.models import RepoSpec, name_from_url, sanitize_url
     "url,expected",
     [
         ("https://host/org/repo.git", "repo"),
-        ("https://user@dev.azure.com/org/Proj/_git/portfolios.api", "portfolios.api"),
+        ("https://user@dev.azure.com/org/Proj/_git/svc.api", "svc.api"),
         ("git@github.com:org/some-repo.git", "some-repo"),
         ("ssh://git@host:22/org/repo/", "repo"),
     ],
@@ -127,9 +127,9 @@ def test_list_format(tmp_path: Path):
 
 def test_resolve_root_auto_uses_directory_when_empty(tmp_path: Path):
     config = FleetConfig(
-        name="Fleet", directory="Portfolios Backend", source=tmp_path / "repofleet.toml"
+        name="Fleet", directory="Backend Services", source=tmp_path / "repofleet.toml"
     )
-    assert config.resolve_root() == (tmp_path / "Portfolios Backend").resolve()
+    assert config.resolve_root() == (tmp_path / "Backend Services").resolve()
 
 
 def test_resolve_root_auto_uses_base_when_repos_exist(tmp_path: Path):

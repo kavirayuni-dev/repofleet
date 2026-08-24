@@ -1,0 +1,42 @@
+# repofleet example profile.
+#
+# Copy this file next to where you want the repositories, rename it to
+# repofleet.toml, replace the [[repos]] entries with your own, then run:
+#
+#   repofleet sync
+#
+# Or keep the name and point at it explicitly:
+#
+#   repofleet sync -c example-workspace.toml
+
+[workspace]
+name = "Backend Services"
+# root: "auto" keeps repos next to this file when some already exist,
+# otherwise they are cloned into the 'directory' below.
+root = "auto"
+directory = "Backend Services"
+# match: which local folder names may be auto-adopted into this file
+match = ["svc.*"]
+remote = "origin"
+# repos_file: extra repositories, one URL per line (easy to paste and share)
+repos_file = "repo-urls.txt"
+
+[defaults]
+stash = true
+prune = true
+jobs = 4
+# autoadopt: add locally-found repos that are missing here into this file
+autoadopt = true
+
+[[repos]]
+name = "svc.api"
+url = "https://github.com/org/svc.api.git"
+
+[[repos]]
+name = "svc.auth"
+url = "https://github.com/org/svc.auth.git"
+
+[[repos]]
+name = "svc.worker"
+url = "https://dev.azure.com/org/Project/_git/svc.worker"
+branch = "develop"

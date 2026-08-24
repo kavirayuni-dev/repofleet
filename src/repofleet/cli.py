@@ -10,6 +10,7 @@ from typing import List, Optional
 from repofleet import __version__, gitcmd
 from repofleet.config import (
     CONFIG_FILENAMES,
+    REPOS_FILENAME,
     ConfigError,
     FleetConfig,
     append_repos,
@@ -19,6 +20,7 @@ from repofleet.config import (
     normalize_url,
     remove_repos,
     save_config,
+    write_repos_template,
 )
 from repofleet.discovery import discover_repos, matches
 from repofleet.models import ADOPTED, RepoResult, RepoSpec, sanitize_url
@@ -27,11 +29,11 @@ from repofleet.runner import error, info, run_all, summarize
 
 EPILOG = """\
 examples:
-  repofleet init --directory "Portfolios Backend"   create a config from repos found on disk
+  repofleet init                                    create a config (and repo-urls.txt) here
   repofleet sync                                    clone missing, update existing, adopt new
-  repofleet update --only portfolios.api            update a single repo
+  repofleet update --only service.api               update a single repo
   repofleet add https://host/org/repo.git           track a new repository
-  repofleet clone --repos-file team-repos.txt       clone everything listed in a text file
+  repofleet clone --repos-file repo-urls.txt        clone everything listed in a text file
 """
 
 
@@ -115,6 +117,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_init.add_argument(
         "--force", action="store_true", help="Overwrite an existing config."
+    )
+    p_init.add_argument(
+        "--no-repos-file",
+        action="store_true",
+        help=f"Do not create the companion {REPOS_FILENAME} list.",
     )
     p_init.set_defaults(func=cmd_init)
 
@@ -236,8 +243,12 @@ def require_repos(specs: List[RepoSpec]) -> bool:
     if specs:
         return True
     error(
-        "No repositories selected. Add some with 'repofleet add <url>', point at a list with\n"
-        "--repos-file, or generate a config from an existing folder with 'repofleet init'."
+        "No repositories selected. Do one of:\n"
+        f"  - list the URLs (one per line) in ./{REPOS_FILENAME}, then run 'repofleet sync'\n"
+        "  - repofleet add <url> [<url> ...]\n"
+        "  - repofleet sync --repos-file <file>\n"
+        f"If you have no config yet, run 'repofleet init' to create ./{CONFIG_FILENAMES[0]}\n"
+        f"and ./{REPOS_FILENAME}."
     )
     return False
 
@@ -262,19 +273,57 @@ def cmd_init(args) -> int:
     config.match = list(args.match)
     config.source = output
     config.repos = merge_specs(config.repos, discovered)
+    repos_file = output.parent / REPOS_FILENAME
+    if not args.no_repos_file:
+        config.repos_file = REPOS_FILENAME
 
     if args.dry_run:
         info(f"Would write {len(config.repos)} repo(s) to {output}")
+        if not args.no_repos_file:
+            info(f"Would write an example repository list to {repos_file}")
         for spec in config.repos:
             info(f"  {spec.name}  {sanitize_url(spec.url)}")
         return 0
 
     path = save_config(config, output)
+    created_list = not args.no_repos_file and write_repos_template(repos_file)
+
     info(f"Wrote {path} with {len(config.repos)} repository entrie(s).")
     if discovered:
         info(f"Discovered {len(discovered)} repo(s) under {scan_root}.")
-    info("Next: run 'repofleet sync' to clone anything missing and update the rest.")
+    if created_list:
+        info(f"Wrote {repos_file} - paste your repository URLs there, one per line.")
+    _print_next_steps(config, repos_file if not args.no_repos_file else None)
     return 0
+
+
+def _print_next_steps(config: FleetConfig, repos_file: Optional[Path]) -> None:
+    info("")
+    info("Next steps")
+    info("----------")
+    step = 1
+    if not config.repos:
+        if repos_file:
+            info(f"{step}. List the repositories you want, one URL per line, in")
+            info(f"   {repos_file}")
+            info("   (the file already contains commented-out examples)")
+        else:
+            info(f"{step}. Add repositories:  repofleet add <url> [<url> ...]")
+        step += 1
+    info(f"{step}. Preview what will happen:  repofleet sync --dry-run")
+    step += 1
+    info(f"{step}. Clone everything:          repofleet sync")
+    step += 1
+    info(
+        f"{step}. Every day after that:      repofleet sync   (clones new, pulls the rest)"
+    )
+    info("")
+    info(f"Repositories will be cloned into: {config.resolve_root()}")
+    info("Check anytime with 'repofleet list' or 'repofleet status'.")
+    info(
+        "Tip: make sure git can authenticate first - clone one repo by hand so your\n"
+        "     credential helper stores the password (repofleet never prompts)."
+    )
 
 
 def cmd_list(args) -> int:
