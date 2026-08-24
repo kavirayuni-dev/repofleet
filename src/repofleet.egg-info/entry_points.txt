@@ -1,0 +1,2 @@
+[console_scripts]
+repofleet = repofleet.cli:main
