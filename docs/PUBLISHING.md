@@ -45,6 +45,38 @@ python -m venv /tmp/verify && /tmp/verify/bin/pip install dist/repofleet-*.whl
 
 ## 3. Publish to PyPI
 
+### 3a. GitHub Actions with Trusted Publishing (recommended)
+
+`.github/workflows/publish.yml` publishes automatically — no API token is stored anywhere. One-time
+setup:
+
+1. **Create the PyPI environments on GitHub**: Settings → Environments → New environment, named
+   exactly `pypi` and `testpypi`. (Optionally add required reviewers to `pypi`.)
+2. **Register the trusted publisher on PyPI**: <https://pypi.org/manage/account/publishing/> →
+   *Add a new pending publisher*:
+   - PyPI Project Name: `repofleet`
+   - Owner: `kavirayuni-dev`
+   - Repository name: `repofleet`
+   - Workflow name: `publish.yml`
+   - Environment name: `pypi`
+3. **Repeat on TestPyPI**: <https://test.pypi.org/manage/account/publishing/> with environment
+   name `testpypi`.
+
+Then:
+
+- **Rehearsal** — Actions → *Publish* → *Run workflow* → target `testpypi`.
+- **Real release** — bump the version, tag it, and publish a GitHub Release:
+
+  ```bash
+  git tag v0.1.0 && git push origin v0.1.0
+  gh release create v0.1.0 --generate-notes
+  ```
+
+  The workflow runs the tests, checks the tag matches `[project] version`, builds, and uploads to
+  PyPI.
+
+### 3b. Manual upload (fallback)
+
 ```bash
 twine upload --repository testpypi dist/*      # rehearse first
 pip install --index-url https://test.pypi.org/simple/ repofleet
@@ -52,7 +84,9 @@ pip install --index-url https://test.pypi.org/simple/ repofleet
 twine upload dist/*                            # the real thing
 ```
 
-Use an API token (`__token__` as username) or, better, a GitHub Actions trusted publisher.
+Use an API token: username `__token__`, password the `pypi-...` token from
+<https://pypi.org/manage/account/token/>. Store it in `~/.pypirc` (chmod 600) or the
+`TWINE_PASSWORD` env var — never in the repo.
 
 ---
 
@@ -93,7 +127,16 @@ Same flow — point `repository` at the feed's upload URL and use your feed cred
 
 ---
 
-## 5. Release pipeline (Azure Pipelines)
+## 5. Release pipelines
+
+### GitHub Actions (this repo)
+
+| Workflow | File | Trigger | What it does |
+| --- | --- | --- | --- |
+| CI | `.github/workflows/ci.yml` | push to `main`/`master`, PRs, manual | pytest on Linux + Windows across Python 3.9–3.13, plus a `python -m build` + `twine check` smoke build |
+| Publish | `.github/workflows/publish.yml` | GitHub Release published, or manual | tests, builds, verifies tag matches the version, uploads via Trusted Publishing |
+
+### Azure Pipelines (private feed alternative)
 
 ```yaml
 trigger:
