@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-09-04
+
+### Changed
+
+- **Fixed the "Documentation" link 404 on PyPI.** All Markdown links in `README.md` now use
+  absolute `https://github.com/kavirayuni-dev/repofleet/…` URLs so they resolve correctly from the
+  PyPI project page (relative links like `docs/USAGE.md` were 404-ing there because PyPI does not
+  rewrite them to the source repository).
+- Expanded `[project.urls]` in `pyproject.toml` — the PyPI sidebar now surfaces Homepage,
+  Documentation, Usage Guide, Team Wiki, Source, Issues, Changelog, Releases, CI Status,
+  Publishing guide and the canonical PyPI page.
+- Rewrote `README.md` for a professional public release: added PyPI/Python/License/CI badges, a
+  full table of contents, a "Feature highlights" matrix, a self-contained CLI + configuration
+  reference, contributor and CI/CD sections, and richer troubleshooting so PyPI visitors get
+  everything they need on one page.
+
+### Notes
+
+- No functional changes to the CLI, config schema or Python API — this is a documentation and
+  packaging-metadata release.
+
 ## [0.2.0] - 2026-08-24
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repofleet"
-version = "0.2.0"
+version = "0.2.1"
 description = "Clone, update and keep a fleet of git repositories in sync from a single declarative config."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -37,11 +37,18 @@ dev = ["pytest>=7.4", "build>=1.0", "twine>=5.0"]
 repofleet = "repofleet.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/kavirayuni-dev/repofleet"
-Repository = "https://github.com/kavirayuni-dev/repofleet"
-Issues = "https://github.com/kavirayuni-dev/repofleet/issues"
-Changelog = "https://github.com/kavirayuni-dev/repofleet/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/kavirayuni-dev/repofleet/blob/main/docs/USAGE.md"
+Homepage      = "https://github.com/kavirayuni-dev/repofleet"
+Documentation = "https://github.com/kavirayuni-dev/repofleet#readme"
+"Usage Guide" = "https://github.com/kavirayuni-dev/repofleet/blob/main/docs/USAGE.md"
+"Team Wiki"   = "https://github.com/kavirayuni-dev/repofleet/blob/main/docs/WIKI.md"
+Source        = "https://github.com/kavirayuni-dev/repofleet"
+Repository    = "https://github.com/kavirayuni-dev/repofleet"
+Issues        = "https://github.com/kavirayuni-dev/repofleet/issues"
+Changelog     = "https://github.com/kavirayuni-dev/repofleet/blob/main/CHANGELOG.md"
+Releases      = "https://github.com/kavirayuni-dev/repofleet/releases"
+"CI Status"   = "https://github.com/kavirayuni-dev/repofleet/actions"
+Publishing    = "https://github.com/kavirayuni-dev/repofleet/blob/main/docs/PUBLISHING.md"
+"PyPI Page"   = "https://pypi.org/project/repofleet/"
 
 [tool.setuptools.packages.find]
 where = ["src"]
